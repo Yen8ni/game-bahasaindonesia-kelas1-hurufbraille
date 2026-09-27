@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Petualangan Huruf Braille - Kelas 1 C</title>
+<style>
+:root{
+  --primary:#5b7cfa; --secondary:#8ed1c5; --accent:#ffd166;
+  --pink:#ff9fba; --dark:#26334d; --light:#f7fbff; --white:#fff;
+  --success:#49b675; --danger:#ed6a7a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;font-family:"Trebuchet MS",Arial,sans-serif;
+  background:linear-gradient(145deg,#dff3ff,#fff0f6 55%,#fff8db);
+  color:var(--dark);min-height:100vh;overflow-x:hidden;
+}
+canvas#webgl-bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;opacity:.22}
+.app{width:100%;max-width:520px;margin:auto;padding:14px 14px 28px}
+.card{
+  background:rgba(255,255,255,.94);border:2px solid rgba(255,255,255,.8);
+  border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(63,81,120,.13);
+}
+.header{text-align:center;margin-bottom:14px}
+.badge{display:inline-block;background:#fff;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:800;color:var(--primary)}
+h1{font-size:28px;line-height:1.1;margin:10px 0 6px}
+h2{font-size:21px;margin:5px 0 12px}
+p{line-height:1.5}
+.teacher{font-size:13px;color:#66738b}
+.screen{display:none}.screen.active{display:block}
+.btn{
+  width:100%;border:0;border-radius:16px;padding:14px 16px;margin:6px 0;
+  font-size:16px;font-weight:800;color:#fff;background:var(--primary);
+  box-shadow:0 5px 0 #405fc9;cursor:pointer;
+}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #405fc9}
+.btn.green{background:var(--success);box-shadow:0 5px 0 #358a59}
+.btn.pink{background:var(--pink);box-shadow:0 5px 0 #d97c98}
+.btn.yellow{background:#f3b83f;box-shadow:0 5px 0 #c99425;color:#493800}
+.btn.gray{background:#7c899e;box-shadow:0 5px 0 #5f6b7d}
+input{
+ width:100%;padding:14px;border:2px solid #d9e2f1;border-radius:15px;
+ font-size:16px;outline:none;background:#fff
+}
+input:focus{border-color:var(--primary)}
+.goal{background:#eef3ff;border-radius:18px;padding:12px;margin:12px 0;font-size:14px}
+.navrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.score{background:#fff2bf;padding:8px 12px;border-radius:18px;font-weight:800}
+.progress{height:10px;background:#e7edf6;border-radius:10px;overflow:hidden;margin:10px 0 16px}
+.progress>div{height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));width:0%;transition:.3s}
+.braille-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.braille-card{
+ background:#f4f8ff;border:2px solid #dce7ff;border-radius:18px;padding:12px;text-align:center;
+}
+.braille-symbol{position:relative;width:74px;height:96px;margin:4px auto 7px}
+.dot{
+ position:absolute;width:24px;height:24px;border-radius:50%;background:#d6deeb;
+ border:2px solid #bcc9dc;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08)
+}
+.dot.on{background:#5b7cfa;border-color:#405fc9;box-shadow:0 3px 6px rgba(64,95,201,.25)}
+.d1{left:4px;top:4px}.d2{left:4px;top:36px}.d3{left:4px;top:68px}
+.d4{right:4px;top:4px}.d5{right:4px;top:36px}.d6{right:4px;top:68px}
+.question{font-size:22px;text-align:center;font-weight:900;margin:12px 0}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{
+ border:2px solid #dce7ff;background:#fff;border-radius:17px;padding:15px;
+ font-size:19px;font-weight:900;cursor:pointer;text-align:center
+}
+.choice.correct{background:#dff7e8;border-color:#55bb7b}
+.choice.wrong{background:#ffe3e6;border-color:#ed6a7a}
+.feedback{text-align:center;font-weight:800;min-height:26px;margin:8px 0}
+.result{text-align:center}
+.big-score{font-size:44px;font-weight:900;color:var(--primary)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 5px;border-bottom:1px solid #e7edf6;text-align:left}
+.empty{text-align:center;color:#7b879a;padding:20px}
+.dot-example{display:flex;justify-content:center;gap:5px;margin:8px}
+.small{font-size:12px;color:#718097}
+footer{text-align:center;font-size:11px;color:#718097;margin-top:15px}
+@media(min-width:700px){.app{max-width:560px;padding-top:25px}}
+</style>
+</head>
+<body>
+<canvas id="webgl-bg"></canvas>
+
+<div class="app">
+  <div class="header">
+    <span class="badge">🎓 GAMIFIKASI BAHASA INDONESIA</span>
+    <h1>🌟 Petualangan Huruf Braille</h1>
+    <div class="teacher">Kelas 1 C SD • SD Negeri 04 Kecamatan Pontianak Timur<br>Guru: Yenni, S.Pd.</div>
+  </div>
+
+  <section id="home" class="screen active card">
+    <h2>👋 Selamat Datang!</h2>
+    <p>Yuk belajar mengenal huruf Braille sambil bermain. Temukan pola titik dan pilih huruf yang tepat!</p>
+    <div class="goal"><b>🎯 Tujuan Pembelajaran</b><br>
+      Murid dapat mengenal huruf Braille.
+    </div>
+    <label for="playerName"><b>Nama Murid</b></label>
+    <input id="playerName" maxlength="30" placeholder="Tulis nama kamu..." autocomplete="off">
+    <button class="btn" onclick="startGame()">🚀 Mulai Bermain</button>
+    <button class="btn pink" onclick="showScreen('materi')">📚 Belajar Dulu</button>
+    <button class="btn yellow" onclick="showRecap()">🏆 Rekap Nilai</button>
+  </section>
+
+  <section id="materi" class="screen card">
+    <div class="topbar"><h2>📚 Kenalan dengan Braille</h2><span>⠿</span></div>
+    <p><b>Braille</b> adalah sistem tulisan yang menggunakan pola titik timbul. Satu sel Braille memiliki <b>6 posisi titik</b>.</p>
+    <div class="braille-grid" id="alphabet"></div>
+    <button class="btn" onclick="showScreen('home')">⬅️ Kembali</button>
+  </section>
+
+  <section id="game" class="screen card">
+    <div class="topbar">
+      <b id="playerLabel">Pemain</b>
+      <span class="score">⭐ <span id="score">0</span></span>
+    </div>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div class="small" id="roundLabel">Soal 1 dari 10</div>
+    <div class="question">Huruf apakah ini?</div>
+    <div id="questionBraille"></div>
+    <div class="choice-grid" id="choices"></div>
+    <div class="feedback" id="feedback"></div>
+    <button id="nextBtn" class="btn green" style="display:none" onclick="nextQuestion()">➡️ Soal Berikutnya</button>
+  </section>
+
+  <section id="result" class="screen card result">
+    <h2>🎉 Permainan Selesai!</h2>
+    <p id="resultMessage"></p>
+    <div class="big-score"><span id="finalScore">0</span></div>
+    <p>poin</p>
+    <div id="stars">⭐⭐⭐</div>
+    <button class="btn" onclick="startGame()">🔄 Main Lagi</button>
+    <button class="btn yellow" onclick="showRecap()">🏆 Lihat Rekap</button>
+    <button class="btn gray" onclick="showScreen('home')">🏠 Menu Utama</button>
+  </section>
+
+  <section id="recap" class="screen card">
+    <h2>🏆 Rekap Nilai</h2>
+    <p class="small">Data tersimpan di perangkat ini dalam format JSON.</p>
+    <div id="recapTable"></div>
+    <button class="btn pink" onclick="exportJSON()">📥 Simpan / Unduh JSON</button>
+    <button class="btn gray" onclick="clearRecap()">🗑️ Hapus Rekap</button>
+    <button class="btn" onclick="showScreen('home')">🏠 Kembali</button>
+  </section>
+
+  <footer>© 2026 • Petualangan Huruf Braille • Kelas 1 C</footer>
+</div>
+
+<script>
+// ==========================
+// DATA HURUF BRAILLE A-Z
+// Posisi titik: 1 4 / 2 5 / 3 6
+// ==========================
+const brailleMap = {
+ A:[1], B:[1,2], C:[1,4], D:[1,4,5], E:[1,5],
+ F:[1,2,4], G:[1,2,4,5], H:[1,2,5], I:[2,4], J:[2,4,5],
+ K:[1,3], L:[1,2,3], M:[1,3,4], N:[1,3,4,5], O:[1,3,5],
+ P:[1,2,3,4], Q:[1,2,3,4,5], R:[1,2,3,5], S:[2,3,4], T:[2,3,4,5],
+ U:[1,3,6], V:[1,2,3,6], W:[2,4,5,6], X:[1,3,4,6], Y:[1,3,4,5,6],
+ Z:[1,3,5,6]
+};
+const letters = Object.keys(brailleMap);
+let game = {name:"", score:0, question:0, total:10, answer:"", locked:false};
+const STORAGE_KEY = "brailleGameResults_v1";
+
+function showScreen(id){
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function makeBraille(activeDots=[]){
+ const box=document.createElement("div");
+ box.className="braille-symbol";
+ for(let i=1;i<=6;i++){
+   const d=document.createElement("span");
+   d.className="dot d"+i+(activeDots.includes(i)?" on":"");
+   box.appendChild(d);
+ }
+ return box;
+}
+
+function renderAlphabet(){
+ const wrap=document.getElementById("alphabet");
+ wrap.innerHTML="";
+ letters.forEach(letter=>{
+   const card=document.createElement("div");
+   card.className="braille-card";
+   card.appendChild(makeBraille(brailleMap[letter]));
+   const title=document.createElement("b");
+   title.textContent=letter;
+   card.appendChild(title);
+   wrap.appendChild(card);
+ });
+}
+
+function startGame(){
+ let name=document.getElementById("playerName").value.trim();
+ if(!name){alert("Silakan tulis nama murid terlebih dahulu 😊");return;}
+ game={name,score:0,question:0,total:10,answer:"",locked:false};
+ document.getElementById("playerLabel").textContent="👤 "+name;
+ document.getElementById("score").textContent="0";
+ showScreen("game");
+ loadQuestion();
+}
+
+function shuffled(arr){return [...arr].sort(()=>Math.random()-0.5)}
+
+function loadQuestion(){
+ game.locked=false;
+ game.question++;
+ document.getElementById("roundLabel").textContent=`Soal ${game.question} dari ${game.total}`;
+ document.getElementById("progressBar").style.width=((game.question-1)/game.total*100)+"%";
+ document.getElementById("feedback").textContent="";
+ document.getElementById("nextBtn").style.display="none";
+ const answer=letters[Math.floor(Math.random()*letters.length)];
+ game.answer=answer;
+
+ const q=document.getElementById("questionBraille");
+ q.innerHTML="";
+ const big=makeBraille(brailleMap[answer]);
+ big.style.transform="scale(1.35)";
+ q.appendChild(big);
+
+ let choices=shuffled([answer,...shuffled(letters.filter(x=>x!==answer)).slice(0,3)]);
+ const wrap=document.getElementById("choices");
+ wrap.innerHTML="";
+ choices.forEach(letter=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=letter;
+   b.onclick=()=>checkAnswer(letter,b);
+   wrap.appendChild(b);
+ });
+}
+
+function checkAnswer(choice,button){
+ if(game.locked)return;
+ game.locked=true;
+ const all=document.querySelectorAll(".choice");
+ all.forEach(b=>b.disabled=true);
+ if(choice===game.answer){
+   game.score+=10;
+   button.classList.add("correct");
+   document.getElementById("feedback").textContent="🎉 Hebat! Jawaban benar!";
+ }else{
+   button.classList.add("wrong");
+   all.forEach(b=>{if(b.textContent===game.answer)b.classList.add("correct")});
+   document.getElementById("feedback").textContent=`💡 Jawaban yang benar adalah ${game.answer}.`;
+ }
+ document.getElementById("score").textContent=game.score;
+ document.getElementById("nextBtn").style.display="block";
+}
+
+function nextQuestion(){
+ if(game.question>=game.total){finishGame();return;}
+ loadQuestion();
+}
+
+function finishGame(){
+ document.getElementById("progressBar").style.width="100%";
+ document.getElementById("finalScore").textContent=game.score;
+ const stars=game.score>=90?"⭐⭐⭐":game.score>=60?"⭐⭐":"⭐";
+ document.getElementById("stars").textContent=stars;
+ document.getElementById("resultMessage").textContent=
+   `${game.name}, kamu mendapatkan ${game.score} dari 100 poin. Terus semangat belajar Braille! 🌈`;
+ saveResult();
+ showScreen("result");
+}
+
+function getResults(){
+ try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}
+ catch(e){return[]}
+}
+
+function saveResult(){
+ const results=getResults();
+ results.unshift({
+   nama:game.name,
+   nilai:game.score,
+   benar:game.score/10,
+   total:game.total,
+   tanggal:new Date().toLocaleString("id-ID"),
+   timestamp:Date.now()
+ });
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(results));
+}
+
+function showRecap(){
+ const results=getResults();
+ const box=document.getElementById("recapTable");
+ if(!results.length){
+   box.innerHTML='<div class="empty">Belum ada nilai tersimpan.</div>';
+ }else{
+   let rows=results.map((r,i)=>`
+    <tr><td>${i+1}</td><td>${escapeHTML(r.nama)}</td><td><b>${r.nilai}</b></td><td>${r.tanggal}</td></tr>`).join("");
+   box.innerHTML=`<div style="overflow:auto"><table>
+    <thead><tr><th>No</th><th>Nama</th><th>Nilai</th><th>Waktu</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+ }
+ showScreen("recap");
+}
+
+function escapeHTML(str){
+ return String(str).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+
+function exportJSON(){
+ const data={
+   aplikasi:"Petualangan Huruf Braille",
+   sekolah:"SD Negeri 04 Kecamatan Pontianak Timur",
+   kelas:"1 C",
+   guru:"Yenni, S.Pd.",
+   tujuan:"Murid dapat mengenal huruf Braille.",
+   data: getResults()
+ };
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;a.download="rekap-nilai-braille-kelas-1C.json";
+ a.click();URL.revokeObjectURL(url);
+}
+
+function clearRecap(){
+ if(confirm("Hapus semua rekap nilai di perangkat ini?")){
+   localStorage.removeItem(STORAGE_KEY);
+   showRecap();
+ }
+}
+
+// ====== LATAR WEBGL SEDERHANA ======
+function initWebGL(){
+ const canvas=document.getElementById("webgl-bg");
+ const gl=canvas.getContext("webgl");
+ if(!gl)return;
+ const vs=`
+ attribute vec2 p;
+ void main(){gl_Position=vec4(p,0.0,1.0);}
+ `;
+ const fs=`
+ precision mediump float;
+ uniform float t;
+ void main(){
+   vec2 uv=gl_FragCoord.xy/vec2(800.0,1000.0);
+   float wave=sin(uv.x*7.0+t)*0.04+cos(uv.y*8.0+t*.7)*0.04;
+   gl_FragColor=vec4(0.55+wave,0.75+wave,0.95,1.0);
+ }
+ `;
+ function shader(type,src){
+  const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;
+ }
+ const program=gl.createProgram();
+ gl.attachShader(program,shader(gl.VERTEX_SHADER,vs));
+ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs));
+ gl.linkProgram(program);gl.useProgram(program);
+ const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+ const loc=gl.getAttribLocation(program,"p");gl.enableVertexAttribArray(loc);
+ gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+ const timeLoc=gl.getUniformLocation(program,"t");
+ function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;gl.viewport(0,0,canvas.width,canvas.height)}
+ addEventListener("resize",resize);resize();
+ function draw(t){gl.uniform1f(timeLoc,t*.001);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(draw)}
+ requestAnimationFrame(draw);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+ renderAlphabet();
+ initWebGL();
+});
+</script>
+</body>
+</html>
